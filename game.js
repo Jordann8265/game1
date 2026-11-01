@@ -15,14 +15,25 @@ class Player {
         this.speed = 250; // Pixels per second movement speed
     }
 
-    // Behavior: Update logic now handles movement based on keys pressed
-    update(deltaTime, keys) {
-        // Check keyboard flags and update X coordinate
+    // Behavior: Update logic handles movement and boundaries
+    update(deltaTime, keys, canvasWidth) {
+        // A. Horizontal Movement Math
         if (keys["ArrowLeft"] || keys["a"]) {
-            this.x -= this.speed * deltaTime; // Move left
+            this.x -= this.speed * deltaTime;
         }
         if (keys["ArrowRight"] || keys["d"]) {
-            this.x += this.speed * deltaTime; // Move right
+            this.x += this.speed * deltaTime;
+        }
+
+        // B. Boundary Constraints (Prevent walking off-screen)
+        // Left wall constraint
+        if (this.x < 0) {
+            this.x = 0;
+        }
+        
+        // Right wall constraint (accounting for player's width)
+        if (this.x > canvasWidth - this.width) {
+            this.x = canvasWidth - this.width;
         }
     }
 
@@ -36,15 +47,12 @@ class Player {
 // ---------------------------------------------------------
 // 2. INPUT TRACKING SYSTEM
 // ---------------------------------------------------------
-// An object to track which keys are currently pressed down
 const inputKeys = {};
 
-// Listen for keys being pressed down
 window.addEventListener("keydown", (event) => {
     inputKeys[event.key] = true;
 });
 
-// Listen for keys being released
 window.addEventListener("keyup", (event) => {
     inputKeys[event.key] = false;
 });
@@ -65,8 +73,8 @@ function gameLoop(currentTime) {
     if (isNaN(deltaTime)) deltaTime = 0;
     lastTime = currentTime;
 
-    // A. UPDATE STATE (Pass our active input keys into the player update method)
-    player.update(deltaTime, inputKeys);
+    // A. UPDATE STATE (Pass keys and canvas width into the player update method)
+    player.update(deltaTime, inputKeys, canvas.width);
 
     // B. RENDER PHASE (Painter's Algorithm)
     ctx.clearRect(0, 0, canvas.width, canvas.height);

@@ -15,7 +15,7 @@ class Player {
         this.speed = 250;          // Horizontal movement speed
         
         // Physics properties
-        this.vy = 0;               // Vertical velocity (speed and direction of falling/jumping)
+        this.vy = 0;               // Vertical velocity
         this.gravity = 900;        // Downward pull force
         this.jumpForce = -450;     // Upward push when jumping
         this.isGrounded = false;   // Are we standing on the floor?
@@ -31,20 +31,17 @@ class Player {
             this.x += this.speed * deltaTime;
         }
 
-        // B. Vertical Physics (Gravity)
-        // Pull down by adding gravity to vertical velocity
-        this.vy += this.gravity * deltaTime;
-        // Move the player vertically based on velocity
-        this.y += this.vy * deltaTime;
-
-        // C. Jump Input (Only jump if we are touching the ground)
+        // B. Jump Input (Checked BEFORE gravity so it triggers instantly)
         if ((keys["ArrowUp"] || keys["w"] || keys[" "]) && this.isGrounded) {
             this.vy = this.jumpForce;
-            this.isGrounded = false;
+            this.isGrounded = false; // Leave the ground immediately
         }
 
+        // C. Vertical Physics (Gravity)
+        this.vy += this.gravity * deltaTime;
+        this.y += this.vy * deltaTime;
+
         // D. Floor Collision Detection
-        // Check if the player's bottom edge hits or passes the floor line
         if (this.y + this.height >= floorY) {
             this.y = floorY - this.height; // Snap feet perfectly to the floor
             this.vy = 0;                   // Stop falling velocity
@@ -75,6 +72,10 @@ class Player {
 const inputKeys = {};
 
 window.addEventListener("keydown", (event) => {
+    // Prevent the browser from scrolling the page when using game keys
+    if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].includes(event.key)) {
+        event.preventDefault();
+    }
     inputKeys[event.key] = true;
 });
 
@@ -85,7 +86,7 @@ window.addEventListener("keyup", (event) => {
 // ---------------------------------------------------------
 // 3. INITIALIZE GAME OBJECTS
 // ---------------------------------------------------------
-// Start the player higher up in the air (Y: 100) so we can watch them fall!
+// Start the player higher up in the air (Y: 100)
 const player = new Player(100, 100);
 const floorY = 400;
 

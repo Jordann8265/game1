@@ -18,11 +18,11 @@ class Player {
         this.vy = 0;               // Vertical velocity
         this.gravity = 900;        // Downward pull force
         this.jumpForce = -450;     // Upward push when jumping
-        this.isGrounded = false;   // Are we standing on the floor?
+        this.isGrounded = false;   // Are we standing on a surface?
     }
 
     // Behavior: Update logic handles movement, gravity, and collisions
-    update(deltaTime, keys, canvasWidth, floorY) {
+    update(deltaTime, keys, canvasWidth, floorY, platforms) {
         // A. Horizontal Movement
         if (keys["ArrowLeft"] || keys["a"]) {
             this.x -= this.speed * deltaTime;
@@ -41,16 +41,34 @@ class Player {
         this.vy += this.gravity * deltaTime;
         this.y += this.vy * deltaTime;
 
-        // D. Floor Collision Detection
-        if (this.y + this.height >= floorY) {
+        // Assume we are in the air until proven otherwise
+        this.isGrounded = false;
+
+        // D. Platform Collision Detection (Check floating platforms first)
+        for (let plat of platforms) {
+            // Check if player's horizontal bounds overlap the platform
+            if (
+                this.x + this.width > plat.x &&
+                this.x < plat.x + plat.width &&
+                this.y + this.height >= plat.y &&
+                this.y + this.height <= plat.y + 15 && // Landing threshold from above
+                this.vy >= 0                             // Only collide while falling down
+            ) {
+                this.y = plat.y - this.height; // Snap feet to top of platform
+                this.vy = 0;                   // Kill falling velocity
+                this.isGrounded = true;        // Stand safely
+                break;
+            }
+        }
+
+        // E. Floor Collision Detection (If not already standing on a platform)
+        if (!this.isGrounded && this.y + this.height >= floorY) {
             this.y = floorY - this.height; // Snap feet perfectly to the floor
             this.vy = 0;                   // Stop falling velocity
             this.isGrounded = true;        // Mark as standing safely
-        } else {
-            this.isGrounded = false;       // In the air
         }
 
-        // E. Screen Boundary Constraints (Left/Right walls)
+        // F. Screen Boundary Constraints (Left/Right walls)
         if (this.x < 0) {
             this.x = 0;
         }
@@ -72,7 +90,6 @@ class Player {
 const inputKeys = {};
 
 window.addEventListener("keydown", (event) => {
-    // Prevent the browser from scrolling the page when using game keys
     if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].includes(event.key)) {
         event.preventDefault();
     }
@@ -84,11 +101,16 @@ window.addEventListener("keyup", (event) => {
 });
 
 // ---------------------------------------------------------
-// 3. INITIALIZE GAME OBJECTS
+// 3. INITIALIZE GAME OBJECTS & ENVIRONMENT
 // ---------------------------------------------------------
-// Start the player higher up in the air (Y: 100)
 const player = new Player(100, 100);
 const floorY = 400;
+
+// Define our level platforms (X, Y, Width, Height)
+// Notice Y is 310, which is safely within our 247.5 max jump apex!
+const platforms = [
+    { x: 300, y: 310, width: 200, height: 20 }
+];
 
 let lastTime = 0;
 
@@ -101,7 +123,7 @@ function gameLoop(currentTime) {
     lastTime = currentTime;
 
     // A. UPDATE STATE
-    player.update(deltaTime, inputKeys, canvas.width, floorY);
+    player.update(deltaTime, inputKeys, canvas.width, floorY, platforms);
 
     // B. RENDER PHASE (Painter's Algorithm)
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -110,9 +132,15 @@ function gameLoop(currentTime) {
     ctx.fillStyle = "#0f172a"; 
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Layer 2: Floor Platform
+    // Layer 2: Environment (Floor + Platforms)
     ctx.fillStyle = "#334155"; 
+    // Draw Floor
     ctx.fillRect(0, floorY, canvas.width, canvas.height - floorY);
+    
+    // Draw all platforms in our array
+    platforms.forEach(plat => {
+        ctx.fillRect(plat.x, plat.y, plat.width, plat.height);
+    });
 
     // Layer 3: Player
     player.draw(ctx);
